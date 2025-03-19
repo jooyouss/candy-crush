@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>糖果消消乐</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 主菜单 -->
+    <div id="mainMenu" class="screen">
+        <h1>糖果消消乐</h1>
+        <button id="startGame">开始游戏</button>
+        <button id="levelSelect">选择关卡</button>
+        <button id="settings">设置</button>
+    </div>
+
+    <!-- 关卡选择菜单 -->
+    <div id="levelSelectMenu" class="screen hidden">
+        <h2>选择关卡</h2>
+        <div id="levelGrid"></div>
+        <button class="back-button">返回</button>
+    </div>
+
+    <!-- 设置菜单 -->
+    <div id="settingsMenu" class="screen hidden">
+        <h2>设置</h2>
+        <div class="setting-item">
+            <label for="musicVolume">音乐音量</label>
+            <input type="range" id="musicVolume" min="0" max="100" value="50">
+        </div>
+        <div class="setting-item">
+            <label for="soundVolume">音效音量</label>
+            <input type="range" id="soundVolume" min="0" max="100" value="50">
+        </div>
+        <button class="back-button">返回</button>
+    </div>
+
+    <!-- 游戏界面 -->
+    <div id="gameUI" class="screen hidden">
+        <div class="game-header">
+            <div class="game-info">
+                <span>关卡: <span id="currentLevel">1</span></span>
+                <span>目标分数: <span id="targetScore">1000</span></span>
+                <span>分数: <span id="score">0</span></span>
+                <span>剩余步数: <span id="moves">20</span></span>
+                <span id="timerContainer">时间: <span id="timer">60</span></span>
+            </div>
+            <div class="game-controls">
+                <button id="pauseButton">暂停</button>
+                <button id="restartButton">重新开始</button>
+                <button id="quitButton">退出</button>
+            </div>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <!-- 暂停菜单 -->
+    <div id="pauseMenu" class="screen hidden">
+        <h2>游戏暂停</h2>
+        <button id="resumeButton">继续游戏</button>
+        <button id="restartLevelButton">重新开始</button>
+        <button id="quitToMenuButton">返回主菜单</button>
+    </div>
+
+    <!-- 游戏结束菜单 -->
+    <div id="gameOverMenu" class="screen hidden">
+        <h2>游戏结束</h2>
+        <div class="game-over-info">
+            <p>最终得分: <span id="finalScore">0</span></p>
+            <p>星级评价: <span id="stars">★★★</span></p>
+        </div>
+        <button id="retryButton">重试</button>
+        <button id="nextLevelButton">下一关</button>
+        <button id="menuButton">返回主菜单</button>
+    </div>
+
+    <!-- 加载所有JavaScript文件 -->
+    <script src="js/audio.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/candies.js"></script>
+    <script src="js/levels/levels.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html> 

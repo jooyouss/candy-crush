@@ -1,0 +1,253 @@
+/* 全局样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    color: #ffffff;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 通用屏幕样式 */
+.screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 20px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* 按钮样式 */
+button {
+    background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+    border: none;
+    border-radius: 25px;
+    color: white;
+    padding: 15px 30px;
+    font-size: 18px;
+    margin: 10px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+}
+
+button:active {
+    transform: translateY(1px);
+}
+
+button.back-button {
+    background: linear-gradient(45deg, #6c757d, #495057);
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+}
+
+/* 标题样式 */
+h1, h2 {
+    color: #ffffff;
+    text-align: center;
+    margin-bottom: 30px;
+    text-shadow: 0 2px 10px rgba(255, 255, 255, 0.2);
+}
+
+h1 {
+    font-size: 48px;
+    margin-bottom: 50px;
+}
+
+h2 {
+    font-size: 36px;
+}
+
+/* 游戏界面样式 */
+#gameUI {
+    background: none;
+    padding: 0;
+}
+
+.game-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.game-info {
+    display: flex;
+    gap: 20px;
+    font-size: 18px;
+}
+
+.game-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.game-controls button {
+    padding: 8px 16px;
+    font-size: 16px;
+}
+
+/* 游戏画布样式 */
+#gameCanvas {
+    margin-top: 60px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+}
+
+/* 关卡选择网格 */
+#levelGrid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    max-width: 500px;
+    width: 100%;
+    padding: 20px;
+}
+
+.level-button {
+    background: linear-gradient(45deg, #4CAF50, #45a049);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 20px;
+    font-size: 24px;
+    cursor: pointer;
+    text-align: center;
+    transition: transform 0.2s;
+}
+
+.level-button:hover {
+    transform: scale(1.05);
+}
+
+.level-button.locked {
+    background: linear-gradient(45deg, #6c757d, #495057);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* 设置菜单样式 */
+.setting-item {
+    width: 100%;
+    max-width: 300px;
+    margin: 20px 0;
+}
+
+.setting-item label {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 18px;
+}
+
+.setting-item input[type="range"] {
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    background: #ffffff;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.setting-item input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #ff6b6b;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* 游戏结束菜单样式 */
+.game-over-info {
+    text-align: center;
+    margin: 20px 0;
+    font-size: 24px;
+}
+
+#stars {
+    color: #ffd700;
+    font-size: 36px;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .game-header {
+        flex-direction: column;
+        gap: 10px;
+        padding: 5px;
+    }
+
+    .game-info {
+        font-size: 14px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .game-controls button {
+        padding: 5px 10px;
+        font-size: 14px;
+    }
+
+    #gameCanvas {
+        margin-top: 100px;
+    }
+
+    #levelGrid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    button {
+        padding: 12px 24px;
+        font-size: 16px;
+    }
+
+    h1 {
+        font-size: 36px;
+    }
+
+    h2 {
+        font-size: 28px;
+    }
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.screen {
+    animation: fadeIn 0.3s ease-in-out;
+}
