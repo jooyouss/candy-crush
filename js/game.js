@@ -116,7 +116,7 @@ class CandyCrushGame {
         }
     }
 
-    async swapTiles(tile1, tile2) {
+    async swapTiles(tile1, tile2, isCheckingMatch = true) {
         const candy1 = this.board[tile1.y][tile1.x];
         const candy2 = this.board[tile2.y][tile2.x];
 
@@ -135,16 +135,33 @@ class CandyCrushGame {
         this.board[tile1.y][tile1.x] = candy2;
         this.board[tile2.y][tile2.x] = candy1;
 
-        // 检查是否有匹配
-        const matches = this.findMatches();
-        if (matches.length === 0) {
-            // 如果没有匹配，交换回来
-            window.audioManager.playSound('invalid');
-            await this.swapTiles(tile1, tile2);
-        } else {
-            window.audioManager.playSound('swap');
-            await this.handleMatches(matches);
-            this.checkGameState();
+        // 只在检查匹配时进行匹配检查
+        if (isCheckingMatch) {
+            // 检查是否有匹配
+            const matches = this.findMatches();
+            if (matches.length === 0) {
+                // 如果没有匹配，交换回来
+                window.audioManager.playSound('invalid');
+                
+                // 直接交换位置，不再递归调用
+                this.board[tile1.y][tile1.x] = candy1;
+                this.board[tile2.y][tile2.x] = candy2;
+                
+                // 动画过渡回原位置
+                await window.animationManager.animate(candy1, {
+                    x: tile1.x,
+                    y: tile1.y
+                }, 200, 'easeOutBack');
+
+                await window.animationManager.animate(candy2, {
+                    x: tile2.x,
+                    y: tile2.y
+                }, 200, 'easeOutBack');
+            } else {
+                window.audioManager.playSound('swap');
+                await this.handleMatches(matches);
+                this.checkGameState();
+            }
         }
     }
 
