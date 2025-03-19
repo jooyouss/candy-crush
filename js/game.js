@@ -221,8 +221,17 @@ class CandyCrushGame {
             }
         });
 
-        // 增加分数
-        this.score += matches.length * 10;
+        // 计算分数
+        // 3个相连得5分，4个相连得10分，5个及以上相连得15分
+        let scoreToAdd = 0;
+        const consecutiveMatches = this.findConsecutiveMatches(matches);
+        consecutiveMatches.forEach(count => {
+            if (count === 3) scoreToAdd += 5;
+            else if (count === 4) scoreToAdd += 10;
+            else if (count >= 5) scoreToAdd += 15;
+        });
+
+        this.score += scoreToAdd;
         window.uiManager.updateScore(this.score);
         window.audioManager.playSound('match');
 
@@ -240,6 +249,64 @@ class CandyCrushGame {
         if (newMatches.length > 0) {
             await this.handleMatches(newMatches);
         }
+    }
+
+    findConsecutiveMatches(matches) {
+        const consecutiveCounts = [];
+        const visited = new Set();
+        
+        // 检查水平连续
+        for (let i = 0; i < this.gridSize; i++) {
+            let count = 0;
+            let lastColor = null;
+            
+            for (let j = 0; j < this.gridSize; j++) {
+                const key = `${i},${j}`;
+                if (matches.some(m => m.x === j && m.y === i)) {
+                    const currentColor = this.board[i][j].type.color;
+                    if (lastColor === null || lastColor === currentColor) {
+                        count++;
+                        visited.add(key);
+                    } else {
+                        if (count >= 3) consecutiveCounts.push(count);
+                        count = 1;
+                    }
+                    lastColor = currentColor;
+                } else {
+                    if (count >= 3) consecutiveCounts.push(count);
+                    count = 0;
+                    lastColor = null;
+                }
+            }
+            if (count >= 3) consecutiveCounts.push(count);
+        }
+
+        // 检查垂直连续
+        for (let j = 0; j < this.gridSize; j++) {
+            let count = 0;
+            let lastColor = null;
+            
+            for (let i = 0; i < this.gridSize; i++) {
+                const key = `${i},${j}`;
+                if (matches.some(m => m.x === j && m.y === i) && !visited.has(key)) {
+                    const currentColor = this.board[i][j].type.color;
+                    if (lastColor === null || lastColor === currentColor) {
+                        count++;
+                    } else {
+                        if (count >= 3) consecutiveCounts.push(count);
+                        count = 1;
+                    }
+                    lastColor = currentColor;
+                } else {
+                    if (count >= 3) consecutiveCounts.push(count);
+                    count = 0;
+                    lastColor = null;
+                }
+            }
+            if (count >= 3) consecutiveCounts.push(count);
+        }
+
+        return consecutiveCounts;
     }
 
     async applyGravity() {
