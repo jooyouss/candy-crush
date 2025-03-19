@@ -7,10 +7,25 @@ class AudioManager {
         this.soundVolume = 0.5;
         this.isMuted = false;
 
+        // 创建音效音量控制节点
+        this.soundGainNode = this.audioContext.createGain();
+        this.soundGainNode.connect(this.audioContext.destination);
+        this.soundGainNode.gain.value = this.soundVolume;
+
         // 初始化音效
         this.loadSounds();
         this.initMusic();
         this.bindEvents();
+
+        // 添加点击事件监听器来恢复音频上下文
+        document.addEventListener('click', () => this.resumeAudioContext(), { once: true });
+    }
+
+    // 恢复音频上下文
+    async resumeAudioContext() {
+        if (this.audioContext.state === 'suspended') {
+            await this.audioContext.resume();
+        }
     }
 
     // 加载所有音效
@@ -30,7 +45,7 @@ class AudioManager {
             try {
                 const response = await fetch(`assets/sounds/${sound}.mp3`);
                 const arrayBuffer = await response.arrayBuffer();
-                const audioBuffer = await this.audioContext.decodeAudioBuffer(arrayBuffer);
+                const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
                 this.sounds[sound] = audioBuffer;
             } catch (error) {
                 console.log(`无法加载音效: ${sound}`);
@@ -109,9 +124,20 @@ class AudioManager {
     }
 
     initMusic() {
-        this.music = new Audio('assets/sounds/background-music.mp3');
+        this.music = new Audio();
+        this.music.src = 'assets/sounds/background-music.mp3';
         this.music.loop = true;
+        this.music.preload = 'auto';
         this.setMusicVolume(this.musicVolume);
+
+        // 添加错误处理
+        this.music.addEventListener('error', (e) => {
+            console.error('背景音乐加载失败:', e);
+            // 如果加载失败，创建一个临时的背景音乐
+            if (!this.sounds['background-music']) {
+                this.sounds['background-music'] = this.createTemporarySound('background-music');
+            }
+        });
     }
 
     bindEvents() {
@@ -132,13 +158,34 @@ class AudioManager {
         
         const source = this.audioContext.createBufferSource();
         source.buffer = this.sounds[type];
-        source.connect(this.audioContext.destination);
+        source.connect(this.soundGainNode);
         source.start();
     }
 
     playMusic() {
         if (this.isMuted) return;
-        this.music.play().catch(e => console.log('Error playing music:', e));
+        
+        // 如果音乐加载失败，使用临时音乐
+        if (this.music.error && this.sounds['background-music']) {
+            const source = this.audioContext.createBufferSource();
+            source.buffer = this.sounds['background-music'];
+            source.connect(this.soundGainNode);
+            source.loop = true;
+            source.start();
+            return;
+        }
+
+        this.music.play().catch(e => {
+            console.log('播放音乐时出错:', e);
+            // 尝试使用临时音乐
+            if (this.sounds['background-music']) {
+                const source = this.audioContext.createBufferSource();
+                source.buffer = this.sounds['background-music'];
+                source.connect(this.soundGainNode);
+                source.loop = true;
+                source.start();
+            }
+        });
     }
 
     pauseMusic() {
@@ -152,6 +199,7 @@ class AudioManager {
 
     setSoundVolume(volume) {
         this.soundVolume = volume;
+        this.soundGainNode.gain.value = volume;
     }
 
     mute() {
