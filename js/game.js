@@ -158,29 +158,94 @@ class CandyCrushGame {
                 const candy2 = this.board[i][j+1];
                 const candy3 = this.board[i][j+2];
                 
-                if (candy1 && candy2 && candy3 &&
-                    candy1.type.color === candy2.type.color && 
-                    candy1.type.color === candy3.type.color) {
-                    matches.add(`${i},${j}`);
-                    matches.add(`${i},${j+1}`);
-                    matches.add(`${i},${j+2}`);
+                if (candy1 && candy2 && candy3) {
+                    // 检查普通匹配
+                    if (candy1.type.color === candy2.type.color && 
+                        candy1.type.color === candy3.type.color) {
+                        matches.add(`${i},${j}`);
+                        matches.add(`${i},${j+1}`);
+                        matches.add(`${i},${j+2}`);
+                    }
+                    
+                    // 检查彩虹糖匹配
+                    if (candy1.type.special === 'rainbow' ||
+                        candy2.type.special === 'rainbow' ||
+                        candy3.type.special === 'rainbow') {
+                        matches.add(`${i},${j}`);
+                        matches.add(`${i},${j+1}`);
+                        matches.add(`${i},${j+2}`);
+                    }
                 }
             }
         }
 
         // 检查垂直匹配
-        for (let i = 0; i < this.gridSize - 2; i++) {
-            for (let j = 0; j < this.gridSize; j++) {
+        for (let j = 0; j < this.gridSize; j++) {
+            for (let i = 0; i < this.gridSize - 2; i++) {
                 const candy1 = this.board[i][j];
                 const candy2 = this.board[i+1][j];
                 const candy3 = this.board[i+2][j];
                 
-                if (candy1 && candy2 && candy3 &&
-                    candy1.type.color === candy2.type.color && 
-                    candy1.type.color === candy3.type.color) {
-                    matches.add(`${i},${j}`);
-                    matches.add(`${i+1},${j}`);
-                    matches.add(`${i+2},${j}`);
+                if (candy1 && candy2 && candy3) {
+                    // 检查普通匹配
+                    if (candy1.type.color === candy2.type.color && 
+                        candy1.type.color === candy3.type.color) {
+                        matches.add(`${i},${j}`);
+                        matches.add(`${i+1},${j}`);
+                        matches.add(`${i+2},${j}`);
+                    }
+                    
+                    // 检查彩虹糖匹配
+                    if (candy1.type.special === 'rainbow' ||
+                        candy2.type.special === 'rainbow' ||
+                        candy3.type.special === 'rainbow') {
+                        matches.add(`${i},${j}`);
+                        matches.add(`${i+1},${j}`);
+                        matches.add(`${i+2},${j}`);
+                    }
+                }
+            }
+        }
+
+        // 检查特殊糖果
+        for (let i = 0; i < this.gridSize; i++) {
+            for (let j = 0; j < this.gridSize; j++) {
+                const candy = this.board[i][j];
+                if (candy && candy.type.special) {
+                    switch (candy.type.special) {
+                        case 'striped-h':
+                            // 添加整行
+                            for (let x = 0; x < this.gridSize; x++) {
+                                matches.add(`${i},${x}`);
+                            }
+                            break;
+                        case 'striped-v':
+                            // 添加整列
+                            for (let y = 0; y < this.gridSize; y++) {
+                                matches.add(`${y},${j}`);
+                            }
+                            break;
+                        case 'wrapped':
+                            // 添加3x3范围
+                            for (let y = i-1; y <= i+1; y++) {
+                                for (let x = j-1; x <= j+1; x++) {
+                                    if (this.isValidPosition(x, y)) {
+                                        matches.add(`${y},${x}`);
+                                    }
+                                }
+                            }
+                            break;
+                        case 'bomb':
+                            // 添加5x5范围
+                            for (let y = i-2; y <= i+2; y++) {
+                                for (let x = j-2; x <= j+2; x++) {
+                                    if (this.isValidPosition(x, y)) {
+                                        matches.add(`${y},${x}`);
+                                    }
+                                }
+                            }
+                            break;
+                    }
                 }
             }
         }
@@ -242,71 +307,172 @@ class CandyCrushGame {
     }
 
     createSpecialCandy(matches) {
-        const matchLength = matches.length;
-        const color = this.board[matches[0].y][matches[0].x].type.color;
+        if (matches.length < 3) return null;
 
-        // 检查匹配方向
-        const isHorizontal = matches.every(m => m.y === matches[0].y);
-        const direction = isHorizontal ? 'horizontal' : 'vertical';
+        const matchPositions = matches.map(m => `${m.y},${m.x}`);
+        const horizontalMatches = new Set();
+        const verticalMatches = new Set();
 
-        return window.candyManager.createSpecialCandy(matchLength, color, direction);
+        // 分析匹配方向
+        for (let i = 0; i < this.gridSize; i++) {
+            let consecutiveH = 0;
+            let consecutiveV = 0;
+            for (let j = 0; j < this.gridSize; j++) {
+                // 水平检查
+                if (matchPositions.includes(`${i},${j}`)) {
+                    consecutiveH++;
+                    if (consecutiveH >= 3) {
+                        for (let k = j-consecutiveH+1; k <= j; k++) {
+                            horizontalMatches.add(`${i},${k}`);
+                        }
+                    }
+                } else {
+                    consecutiveH = 0;
+                }
+
+                // 垂直检查
+                if (matchPositions.includes(`${j},${i}`)) {
+                    consecutiveV++;
+                    if (consecutiveV >= 3) {
+                        for (let k = j-consecutiveV+1; k <= j; k++) {
+                            verticalMatches.add(`${k},${i}`);
+                        }
+                    }
+                } else {
+                    consecutiveV = 0;
+                }
+            }
+        }
+
+        // 检查是否形成L形或T形
+        const intersections = new Set([...horizontalMatches].filter(x => verticalMatches.has(x)));
+        if (intersections.size > 0) {
+            // 创建包装糖果
+            return window.candyManager.specialTypes.wrapped(
+                this.board[matches[0].y][matches[0].x].type.color
+            );
+        }
+
+        // 检查长度为5或更多
+        if (matches.length >= 5) {
+            return window.candyManager.specialTypes.bomb(
+                this.board[matches[0].y][matches[0].x].type.color
+            );
+        }
+
+        // 检查长度为4
+        if (matches.length === 4) {
+            const isHorizontal = horizontalMatches.size >= 4;
+            return window.candyManager.specialTypes.striped[isHorizontal ? 'horizontal' : 'vertical'](
+                this.board[matches[0].y][matches[0].x].type.color
+            );
+        }
+
+        // 随机生成包装糖果（较低概率）
+        if (matches.length === 3 && Math.random() < 0.05) {
+            return window.candyManager.specialTypes.wrapped(
+                this.board[matches[0].y][matches[0].x].type.color
+            );
+        }
+
+        return null;
     }
 
     async applyGravity() {
-        let hasFalling = true;
-        while (hasFalling) {
-            hasFalling = false;
-            for (let j = 0; j < this.gridSize; j++) {
-                for (let i = this.gridSize - 1; i >= 0; i--) {
-                    if (!this.board[i][j] && i > 0) {
-                        // 找到上方最近的糖果
-                        for (let k = i - 1; k >= 0; k--) {
-                            if (this.board[k][j]) {
-                                this.board[k][j].falling = true;
-                                this.board[i][j] = this.board[k][j];
-                                this.board[k][j] = null;
-                                hasFalling = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
+        let moved = false;
+        const fallingCandies = new Set();
 
-            if (hasFalling) {
-                // 应用下落动画
-                const fallingCandies = [];
-                for (let i = 0; i < this.gridSize; i++) {
-                    for (let j = 0; j < this.gridSize; j++) {
-                        const candy = this.board[i][j];
-                        if (candy && candy.falling) {
-                            fallingCandies.push(
-                                window.animationManager.animate(candy, {
-                                    y: i
-                                }, 200, 'easeOutBounce')
-                            );
-                            candy.falling = false;
-                        }
+        // 从底部向上检查
+        for (let j = 0; j < this.gridSize; j++) {
+            for (let i = this.gridSize - 1; i >= 0; i--) {
+                if (this.board[i][j] === null) {
+                    // 找到上方最近的糖果
+                    let k = i - 1;
+                    while (k >= 0 && this.board[k][j] === null) {
+                        k--;
+                    }
+                    if (k >= 0) {
+                        // 移动糖果
+                        this.board[i][j] = this.board[k][j];
+                        this.board[k][j] = null;
+                        this.board[i][j].falling = true;
+                        fallingCandies.add(this.board[i][j]);
+                        moved = true;
                     }
                 }
-                await Promise.all(fallingCandies);
             }
         }
+
+        // 如果有糖果移动，等待动画完成
+        if (moved) {
+            const animations = Array.from(fallingCandies).map(candy => {
+                return window.animationManager.animate(candy, {
+                    y: candy.y
+                }, 300, 'easeInQuad');
+            });
+
+            // 等待所有动画完成
+            await Promise.all(animations);
+
+            // 重置falling状态
+            fallingCandies.forEach(candy => {
+                candy.falling = false;
+            });
+        }
+
+        return moved;
     }
 
     fillBoard() {
-        for (let i = 0; i < this.gridSize; i++) {
-            for (let j = 0; j < this.gridSize; j++) {
-                if (!this.board[i][j]) {
+        let filled = false;
+        
+        // 填充空位
+        for (let j = 0; j < this.gridSize; j++) {
+            for (let i = 0; i < this.gridSize; i++) {
+                if (this.board[i][j] === null) {
                     this.board[i][j] = {
                         type: window.candyManager.getRandomBasicType(),
                         x: j,
                         y: i,
-                        falling: false
+                        falling: true
                     };
+                    filled = true;
                 }
             }
         }
+
+        // 如果有新填充的糖果，创建下落动画
+        if (filled) {
+            const animations = [];
+            for (let j = 0; j < this.gridSize; j++) {
+                for (let i = 0; i < this.gridSize; i++) {
+                    const candy = this.board[i][j];
+                    if (candy.falling) {
+                        // 从上方开始下落
+                        candy.y = -1;
+                        animations.push(
+                            window.animationManager.animate(candy, {
+                                y: i
+                            }, 300, 'easeInQuad')
+                        );
+                    }
+                }
+            }
+
+            // 等待所有动画完成
+            return Promise.all(animations).then(() => {
+                // 重置falling状态
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        if (this.board[i][j]) {
+                            this.board[i][j].falling = false;
+                        }
+                    }
+                }
+            });
+        }
+
+        return Promise.resolve();
     }
 
     checkGameState() {
