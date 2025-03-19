@@ -86,68 +86,44 @@ h2 {
 #gameUI {
     background: none;
     padding: 0;
+    overflow: hidden;
+}
+
+.game-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
 }
 
 .game-header {
-    position: fixed;
-    top: 0;
-    left: 0;
+    position: relative;
     width: 100%;
     background: rgba(0, 0, 0, 0.8);
     padding: 10px 20px;
+    z-index: 1;
+}
+
+.canvas-container {
+    flex: 1;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-}
-
-.game-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    color: white;
-    font-size: 1.2em;
-    flex-wrap: wrap; /* 在移动端允许换行 */
-    gap: 10px; /* 元素之间的间距 */
-}
-
-.game-info > div {
-    background-color: #34495e;
-    padding: 10px 15px;
-    border-radius: 5px;
-    min-width: 100px;
-    text-align: center;
-}
-
-.game-controls {
-    display: flex;
-    gap: 10px;
-}
-
-.game-controls button {
-    padding: 8px 16px;
-    font-size: 16px;
-}
-
-/* 游戏画布样式 */
-#gameContainer {
-    position: relative;
-    width: 100%;
-    max-width: 600px;
-    margin: 0 auto;
+    justify-content: center;
     padding: 20px;
-    box-sizing: border-box;
+    overflow: hidden;
+    margin-top: 0;
 }
 
 #gameCanvas {
     display: block;
-    margin: 0 auto;
     background-color: #34495e;
     border-radius: 10px;
     box-shadow: 0 0 20px rgba(0,0,0,0.3);
-    touch-action: none; /* 防止移动端默认的触摸行为 */
+    touch-action: none;
     max-width: 100%;
-    height: auto;
+    max-height: calc(100vh - 150px);
+    object-fit: contain;
 }
 
 /* 关卡选择网格 */
@@ -229,13 +205,17 @@ h2 {
 /* 响应式设计 */
 @media (max-width: 768px) {
     .game-header {
-        flex-direction: column;
-        gap: 10px;
-        padding: 5px;
+        padding: 5px 10px;
     }
 
     .game-info {
         font-size: 14px;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 5px;
+    }
+
+    .game-controls {
         flex-wrap: wrap;
         justify-content: center;
     }
@@ -243,54 +223,60 @@ h2 {
     .game-controls button {
         padding: 5px 10px;
         font-size: 14px;
+        margin: 2px;
+    }
+
+    .canvas-container {
+        padding: 10px;
     }
 
     #gameCanvas {
-        margin-top: 100px;
-    }
-
-    #levelGrid {
-        grid-template-columns: repeat(4, 1fr);
-    }
-
-    button {
-        padding: 12px 24px;
-        font-size: 16px;
-    }
-
-    h1 {
-        font-size: 36px;
-    }
-
-    h2 {
-        font-size: 28px;
+        max-height: calc(100vh - 120px);
     }
 }
 
 /* 移动端适配 */
 @media (max-width: 600px) {
-    #gameContainer {
-        padding: 10px;
+    .game-container {
+        height: 100vh;
     }
 
-    .game-info {
-        font-size: 1em;
+    .game-header {
+        position: relative;
     }
 
-    .game-info > div {
-        min-width: 80px;
-        padding: 8px 12px;
-    }
-}
-
-/* 确保在横屏模式下也能正常显示 */
-@media (orientation: landscape) and (max-height: 500px) {
-    #gameContainer {
+    .canvas-container {
         padding: 5px;
     }
 
     .game-info {
-        margin-bottom: 10px;
+        font-size: 12px;
+    }
+
+    .game-info > span {
+        margin: 2px 5px;
+    }
+}
+
+/* 横屏模式优化 */
+@media (orientation: landscape) and (max-height: 500px) {
+    .game-container {
+        flex-direction: row;
+    }
+
+    .game-header {
+        width: 200px;
+        height: 100%;
+    }
+
+    .canvas-container {
+        flex: 1;
+        height: 100%;
+    }
+
+    #gameCanvas {
+        max-height: 100vh;
+        max-width: calc(100vw - 220px);
     }
 }
 

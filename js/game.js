@@ -279,12 +279,12 @@ class CandyCrushGame {
                     pos.y * this.tileSize + this.tileSize / 2,
                     candy.type.color
                 );
+                // 将匹配的位置设为null
                 this.board[pos.y][pos.x] = null;
             }
         });
 
         // 计算分数
-        // 3个相连得5分，4个相连得10分，5个及以上相连得15分
         let scoreToAdd = 0;
         const consecutiveMatches = this.findConsecutiveMatches(matches);
         consecutiveMatches.forEach(count => {
@@ -297,14 +297,14 @@ class CandyCrushGame {
         window.uiManager.updateScore(this.score);
         window.audioManager.playSound('match');
 
-        // 等待动画完成
+        // 等待消除动画完成
         await new Promise(resolve => setTimeout(resolve, 300));
 
         // 应用重力效果
         await this.applyGravity();
 
         // 填充新的糖果
-        await this.fillBoard();
+        await this.fillEmptySpaces();
 
         // 检查新的匹配
         const newMatches = this.findMatches();
@@ -416,56 +416,57 @@ class CandyCrushGame {
         return moved;
     }
 
-    fillBoard() {
-        let filled = false;
+    async fillEmptySpaces() {
+        const animations = [];
         
-        // 填充空位
+        // 遍历每一列
         for (let j = 0; j < this.gridSize; j++) {
+            // 计算这一列有多少个空位
+            let emptyCount = 0;
             for (let i = 0; i < this.gridSize; i++) {
                 if (this.board[i][j] === null) {
-                    this.board[i][j] = {
-                        type: window.candyManager.getRandomBasicType(),
-                        x: j,
-                        y: i,
-                        falling: true
-                    };
-                    filled = true;
+                    emptyCount++;
                 }
             }
-        }
 
-        // 如果有新填充的糖果，创建下落动画
-        if (filled) {
-            const animations = [];
-            for (let j = 0; j < this.gridSize; j++) {
-                for (let i = 0; i < this.gridSize; i++) {
-                    const candy = this.board[i][j];
-                    if (candy.falling) {
-                        // 从上方开始下落
-                        candy.y = -1;
+            // 如果有空位，从上方生成新的糖果
+            if (emptyCount > 0) {
+                // 将现有的糖果向下移动
+                for (let i = this.gridSize - 1; i >= 0; i--) {
+                    if (this.board[i][j] === null) {
+                        // 创建新的糖果
+                        const newCandy = {
+                            type: window.candyManager.getRandomBasicType(),
+                            x: j,
+                            y: i - emptyCount,
+                            falling: true
+                        };
+                        this.board[i][j] = newCandy;
+
+                        // 添加下落动画
                         animations.push(
-                            window.animationManager.animate(candy, {
+                            window.animationManager.animate(newCandy, {
                                 y: i
                             }, 300, 'easeInQuad')
                         );
                     }
                 }
             }
-
-            // 等待所有动画完成
-            return Promise.all(animations).then(() => {
-                // 重置falling状态
-                for (let i = 0; i < this.gridSize; i++) {
-                    for (let j = 0; j < this.gridSize; j++) {
-                        if (this.board[i][j]) {
-                            this.board[i][j].falling = false;
-                        }
-                    }
-                }
-            });
         }
 
-        return Promise.resolve();
+        // 等待所有动画完成
+        if (animations.length > 0) {
+            await Promise.all(animations);
+            
+            // 重置所有糖果的falling状态
+            for (let i = 0; i < this.gridSize; i++) {
+                for (let j = 0; j < this.gridSize; j++) {
+                    if (this.board[i][j]) {
+                        this.board[i][j].falling = false;
+                    }
+                }
+            }
+        }
     }
 
     checkGameState() {
