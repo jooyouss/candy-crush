@@ -173,23 +173,12 @@ class CandyCrushGame {
                 const candy2 = this.board[i][j+1];
                 const candy3 = this.board[i][j+2];
                 
-                if (candy1 && candy2 && candy3) {
-                    // 检查普通匹配
-                    if (candy1.type.color === candy2.type.color && 
-                        candy1.type.color === candy3.type.color) {
-                        matches.add(`${i},${j}`);
-                        matches.add(`${i},${j+1}`);
-                        matches.add(`${i},${j+2}`);
-                    }
-                    
-                    // 检查彩虹糖匹配
-                    if (candy1.type.special === 'rainbow' ||
-                        candy2.type.special === 'rainbow' ||
-                        candy3.type.special === 'rainbow') {
-                        matches.add(`${i},${j}`);
-                        matches.add(`${i},${j+1}`);
-                        matches.add(`${i},${j+2}`);
-                    }
+                if (candy1 && candy2 && candy3 &&
+                    candy1.type.color === candy2.type.color && 
+                    candy1.type.color === candy3.type.color) {
+                    matches.add(`${i},${j}`);
+                    matches.add(`${i},${j+1}`);
+                    matches.add(`${i},${j+2}`);
                 }
             }
         }
@@ -201,66 +190,12 @@ class CandyCrushGame {
                 const candy2 = this.board[i+1][j];
                 const candy3 = this.board[i+2][j];
                 
-                if (candy1 && candy2 && candy3) {
-                    // 检查普通匹配
-                    if (candy1.type.color === candy2.type.color && 
-                        candy1.type.color === candy3.type.color) {
-                        matches.add(`${i},${j}`);
-                        matches.add(`${i+1},${j}`);
-                        matches.add(`${i+2},${j}`);
-                    }
-                    
-                    // 检查彩虹糖匹配
-                    if (candy1.type.special === 'rainbow' ||
-                        candy2.type.special === 'rainbow' ||
-                        candy3.type.special === 'rainbow') {
-                        matches.add(`${i},${j}`);
-                        matches.add(`${i+1},${j}`);
-                        matches.add(`${i+2},${j}`);
-                    }
-                }
-            }
-        }
-
-        // 检查特殊糖果
-        for (let i = 0; i < this.gridSize; i++) {
-            for (let j = 0; j < this.gridSize; j++) {
-                const candy = this.board[i][j];
-                if (candy && candy.type.special) {
-                    switch (candy.type.special) {
-                        case 'striped-h':
-                            // 添加整行
-                            for (let x = 0; x < this.gridSize; x++) {
-                                matches.add(`${i},${x}`);
-                            }
-                            break;
-                        case 'striped-v':
-                            // 添加整列
-                            for (let y = 0; y < this.gridSize; y++) {
-                                matches.add(`${y},${j}`);
-                            }
-                            break;
-                        case 'wrapped':
-                            // 添加3x3范围
-                            for (let y = i-1; y <= i+1; y++) {
-                                for (let x = j-1; x <= j+1; x++) {
-                                    if (this.isValidPosition(x, y)) {
-                                        matches.add(`${y},${x}`);
-                                    }
-                                }
-                            }
-                            break;
-                        case 'bomb':
-                            // 添加5x5范围
-                            for (let y = i-2; y <= i+2; y++) {
-                                for (let x = j-2; x <= j+2; x++) {
-                                    if (this.isValidPosition(x, y)) {
-                                        matches.add(`${y},${x}`);
-                                    }
-                                }
-                            }
-                            break;
-                    }
+                if (candy1 && candy2 && candy3 &&
+                    candy1.type.color === candy2.type.color && 
+                    candy1.type.color === candy3.type.color) {
+                    matches.add(`${i},${j}`);
+                    matches.add(`${i+1},${j}`);
+                    matches.add(`${i+2},${j}`);
                 }
             }
         }
@@ -272,20 +207,6 @@ class CandyCrushGame {
     }
 
     async handleMatches(matches) {
-        // 创建特殊糖果
-        const specialCandy = this.createSpecialCandy(matches);
-        if (specialCandy) {
-            const pos = matches[Math.floor(matches.length / 2)];
-            this.board[pos.y][pos.x] = {
-                type: specialCandy,
-                x: pos.x,
-                y: pos.y,
-                falling: false
-            };
-            matches = matches.filter(m => m.x !== pos.x || m.y !== pos.y);
-            window.audioManager.playSound('special');
-        }
-
         // 移除匹配的糖果
         matches.forEach(pos => {
             const candy = this.board[pos.y][pos.x];
@@ -312,85 +233,13 @@ class CandyCrushGame {
         await this.applyGravity();
 
         // 填充新的糖果
-        this.fillBoard();
+        await this.fillBoard();
 
         // 检查新的匹配
         const newMatches = this.findMatches();
         if (newMatches.length > 0) {
             await this.handleMatches(newMatches);
         }
-    }
-
-    createSpecialCandy(matches) {
-        if (matches.length < 3) return null;
-
-        const matchPositions = matches.map(m => `${m.y},${m.x}`);
-        const horizontalMatches = new Set();
-        const verticalMatches = new Set();
-
-        // 分析匹配方向
-        for (let i = 0; i < this.gridSize; i++) {
-            let consecutiveH = 0;
-            let consecutiveV = 0;
-            for (let j = 0; j < this.gridSize; j++) {
-                // 水平检查
-                if (matchPositions.includes(`${i},${j}`)) {
-                    consecutiveH++;
-                    if (consecutiveH >= 3) {
-                        for (let k = j-consecutiveH+1; k <= j; k++) {
-                            horizontalMatches.add(`${i},${k}`);
-                        }
-                    }
-                } else {
-                    consecutiveH = 0;
-                }
-
-                // 垂直检查
-                if (matchPositions.includes(`${j},${i}`)) {
-                    consecutiveV++;
-                    if (consecutiveV >= 3) {
-                        for (let k = j-consecutiveV+1; k <= j; k++) {
-                            verticalMatches.add(`${k},${i}`);
-                        }
-                    }
-                } else {
-                    consecutiveV = 0;
-                }
-            }
-        }
-
-        // 检查是否形成L形或T形
-        const intersections = new Set([...horizontalMatches].filter(x => verticalMatches.has(x)));
-        if (intersections.size > 0) {
-            // 创建包装糖果
-            return window.candyManager.specialTypes.wrapped(
-                this.board[matches[0].y][matches[0].x].type.color
-            );
-        }
-
-        // 检查长度为5或更多
-        if (matches.length >= 5) {
-            return window.candyManager.specialTypes.bomb(
-                this.board[matches[0].y][matches[0].x].type.color
-            );
-        }
-
-        // 检查长度为4
-        if (matches.length === 4) {
-            const isHorizontal = horizontalMatches.size >= 4;
-            return window.candyManager.specialTypes.striped[isHorizontal ? 'horizontal' : 'vertical'](
-                this.board[matches[0].y][matches[0].x].type.color
-            );
-        }
-
-        // 随机生成包装糖果（较低概率）
-        if (matches.length === 3 && Math.random() < 0.05) {
-            return window.candyManager.specialTypes.wrapped(
-                this.board[matches[0].y][matches[0].x].type.color
-            );
-        }
-
-        return null;
     }
 
     async applyGravity() {
