@@ -19,7 +19,7 @@ class CandyCrushGame {
     }
 
     initializeGame() {
-        // 绑定事件监听器
+        // 绑定鼠标点击事件监听器
         this.canvas.addEventListener('click', (e) => {
             if (!this.gameState.isPlaying || this.gameState.isPaused) return;
             
@@ -28,6 +28,67 @@ class CandyCrushGame {
             const y = Math.floor((e.clientY - rect.top) / this.tileSize);
             
             this.handleClick(x, y);
+        });
+
+        // 添加触摸事件支持
+        let touchStartX = null;
+        let touchStartY = null;
+        let touchStartTime = null;
+
+        this.canvas.addEventListener('touchstart', (e) => {
+            if (!this.gameState.isPlaying || this.gameState.isPaused) return;
+            e.preventDefault(); // 防止页面滚动
+
+            const rect = this.canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            touchStartX = Math.floor((touch.clientX - rect.left) / this.tileSize);
+            touchStartY = Math.floor((touch.clientY - rect.top) / this.tileSize);
+            touchStartTime = Date.now();
+
+            // 处理点击选择
+            this.handleClick(touchStartX, touchStartY);
+        });
+
+        this.canvas.addEventListener('touchmove', (e) => {
+            if (!this.gameState.isPlaying || this.gameState.isPaused) return;
+            e.preventDefault(); // 防止页面滚动
+        });
+
+        this.canvas.addEventListener('touchend', (e) => {
+            if (!this.gameState.isPlaying || this.gameState.isPaused) return;
+            if (touchStartX === null || touchStartY === null) return;
+            e.preventDefault(); // 防止页面滚动
+
+            const rect = this.canvas.getBoundingClientRect();
+            const touch = e.changedTouches[0];
+            const touchEndX = Math.floor((touch.clientX - rect.left) / this.tileSize);
+            const touchEndY = Math.floor((touch.clientY - rect.top) / this.tileSize);
+            const touchEndTime = Date.now();
+
+            // 如果触摸时间小于200ms且起点终点相同，视为点击
+            if (touchEndTime - touchStartTime < 200 && 
+                touchEndX === touchStartX && 
+                touchEndY === touchStartY) {
+                // 点击已经在touchstart中处理
+                return;
+            }
+
+            // 如果起点和终点相邻，视为滑动
+            if (this.isValidPosition(touchEndX, touchEndY) &&
+                this.isAdjacent({x: touchStartX, y: touchStartY}, {x: touchEndX, y: touchEndY})) {
+                this.swapTiles(
+                    {x: touchStartX, y: touchStartY},
+                    {x: touchEndX, y: touchEndY}
+                );
+                this.moves--;
+                window.uiManager.updateMoves(this.moves);
+                this.selectedTile = null;
+            }
+
+            // 重置触摸状态
+            touchStartX = null;
+            touchStartY = null;
+            touchStartTime = null;
         });
 
         // 启动游戏循环
@@ -100,9 +161,10 @@ class CandyCrushGame {
                 this.moves--;
                 window.uiManager.updateMoves(this.moves);
             } else {
-                window.audioManager.playSound('invalid');
+                // 如果点击的不是相邻位置，更新选中的糖果
+                this.selectedTile = {x, y};
+                window.audioManager.playSound('click');
             }
-            this.selectedTile = null;
         }
     }
 
