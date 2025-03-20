@@ -222,6 +222,13 @@ class CandyCrushGame {
         // 处理糖果下落和填充
         await this.handleFallingAndFilling();
 
+        // 检查是否达到目标分数
+        const levelConfig = window.levelManager.getLevel(this.currentLevel);
+        if (this.score >= levelConfig.targetScore) {
+            this.gameOver(true);
+            return;
+        }
+
         // 检查是否有新的匹配
         const newMatches = this.findMatches();
         if (newMatches.length > 0) {
@@ -302,7 +309,6 @@ class CandyCrushGame {
             if (this.score >= levelConfig.targetScore) {
                 this.gameOver(true);
             } else {
-                // 只有在确实没有移动次数，并且没有达到目标分数时才结束游戏
                 this.gameOver(false);
             }
             return;
@@ -638,10 +644,10 @@ class CandyCrushGame {
                 localStorage.setItem('unlockedLevels', (this.currentLevel + 1).toString());
             }
             nextLevelButton.style.display = 'block';
-            window.audioManager.playSound('level-complete');
+            window.audioManager?.playSound('level-complete');
         } else {
             nextLevelButton.style.display = 'none';
-            window.audioManager.playSound('game-over');
+            window.audioManager?.playSound('game-over');
         }
     }
 
