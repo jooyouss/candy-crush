@@ -161,25 +161,26 @@ class UIManager {
         });
 
         canvas.addEventListener('touchend', (e) => {
+            if (!startX || !startY) return;
+            
             const touch = e.changedTouches[0];
-            const deltaX = touch.clientX - startX;
-            const deltaY = touch.clientY - startY;
-            const minSwipeDistance = 30;
+            const endX = touch.clientX;
+            const endY = touch.clientY;
 
-            if (Math.abs(deltaX) > minSwipeDistance || Math.abs(deltaY) > minSwipeDistance) {
-                const rect = canvas.getBoundingClientRect();
-                const x = Math.floor((startX - rect.left) / window.game.tileSize);
-                const y = Math.floor((startY - rect.top) / window.game.tileSize);
+            // 计算滑动距离
+            const deltaX = endX - startX;
+            const deltaY = endY - startY;
 
-                let newX = x, newY = y;
-                if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                    newX += deltaX > 0 ? 1 : -1;
-                } else {
-                    newY += deltaY > 0 ? 1 : -1;
-                }
+            // 如果滑动距离太小，不处理
+            if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) return;
 
-                window.game.handleSwipe(x, y, newX, newY);
-            }
+            // 调用游戏的滑动处理方法
+            window.game.handleSwipe(startX, startY, endX, endY);
+            
+            // 重置起始位置
+            startX = null;
+            startY = null;
+            
             e.preventDefault();
         });
     }

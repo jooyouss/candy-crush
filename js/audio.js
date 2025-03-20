@@ -1,215 +1,257 @@
 class AudioManager {
     constructor() {
-        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        this.sounds = {};
-        this.music = null;
-        this.musicVolume = 0.5;
-        this.soundVolume = 0.5;
-        this.isMuted = false;
+        console.log('初始化 AudioManager');
+        try {
+            // 创建音频上下文
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            console.log('音频上下文状态:', this.audioContext.state);
+            
+            // 音频状态
+            this.isMuted = false;
+            this.isMusicEnabled = true;
+            this.musicVolume = 0.5;
+            this.soundVolume = 0.5;
+            
+            // 音频缓存
+            this.audioBuffers = {};
+            this.musicSource = null;
+            
+            // 音量控制节点
+            this.musicGain = this.audioContext.createGain();
+            this.soundGain = this.audioContext.createGain();
+            this.musicGain.connect(this.audioContext.destination);
+            this.soundGain.connect(this.audioContext.destination);
+            
+            // 设置初始音量
+            this.musicGain.gain.value = this.musicVolume;
+            this.soundGain.gain.value = this.soundVolume;
+            
+            // 加载音频资源
+            this.loadAudioFiles();
+            
+            // 绑定音量控制
+            this.bindVolumeControls();
 
-        // 创建音效音量控制节点
-        this.soundGainNode = this.audioContext.createGain();
-        this.soundGainNode.connect(this.audioContext.destination);
-        this.soundGainNode.gain.value = this.soundVolume;
+            // 添加点击事件监听器来恢复音频上下文
+            document.addEventListener('click', () => this.resumeAudioContext(), { once: true });
 
-        // 初始化音效
-        this.loadSounds();
-        this.initMusic();
-        this.bindEvents();
-
-        // 添加点击事件监听器来恢复音频上下文
-        document.addEventListener('click', () => this.resumeAudioContext(), { once: true });
-    }
-
-    // 恢复音频上下文
-    async resumeAudioContext() {
-        if (this.audioContext.state === 'suspended') {
-            await this.audioContext.resume();
+            // 绑定音乐开关按钮
+            this.bindMusicToggle();
+        } catch (error) {
+            console.error('AudioManager 初始化失败:', error);
         }
     }
 
-    // 加载所有音效
-    async loadSounds() {
-        const soundFiles = [
-            'click',
-            'swap',
-            'match',
-            'invalid',
-            'special',
-            'level-complete',
-            'game-over',
-            'background-music'
-        ];
+    async loadAudioFiles() {
+        console.log('开始加载音频文件');
+        const audioFiles = {
+            'background-music': 'assets/sounds/background-music.mp3',
+            'match': 'assets/sounds/match.mp3',
+            'swap': 'assets/sounds/swap.mp3',
+            'invalid': 'assets/sounds/invalid.mp3',
+            'special': 'assets/sounds/special.mp3',
+            'click': 'assets/sounds/click.mp3',
+            'level-complete': 'assets/sounds/level-complete.mp3',
+            'game-over': 'assets/sounds/game-over.mp3'
+        };
 
-        for (const sound of soundFiles) {
+        for (const [name, path] of Object.entries(audioFiles)) {
             try {
-                const response = await fetch(`assets/sounds/${sound}.mp3`);
+                console.log(`尝试加载音频: ${path}`);
+                
+                const response = await fetch(path);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const arrayBuffer = await response.arrayBuffer();
+                if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+                    throw new Error('加载的音频数据为空');
+                }
+                
+                console.log(`音频数据大小: ${arrayBuffer.byteLength} 字节`);
+                
                 const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-                this.sounds[sound] = audioBuffer;
+                this.audioBuffers[name] = audioBuffer;
+                console.log(`音频 ${name} 加载成功`);
+                
+                // 如果是背景音乐且尚未开始播放，则开始播放
+                if (name === 'background-music' && !this.musicSource && this.audioContext.state === 'running') {
+                    console.log('尝试播放背景音乐');
+                    this.playBackgroundMusic();
+                }
             } catch (error) {
-                console.log(`无法加载音效: ${sound}`);
-                // 创建临时音效
-                this.sounds[sound] = this.createTemporarySound(sound);
+                console.error(`加载音频文件失败 ${name} (${path}):`, error);
             }
         }
     }
 
-    // 创建临时音效
-    createTemporarySound(type) {
-        const duration = 0.1; // 音效持续时间（秒）
-        const sampleRate = this.audioContext.sampleRate;
-        const buffer = this.audioContext.createBuffer(1, sampleRate * duration, sampleRate);
-        const data = buffer.getChannelData(0);
-
-        switch (type) {
-            case 'click':
-                // 生成点击音效（短促的高音）
-                for (let i = 0; i < buffer.length; i++) {
-                    data[i] = Math.sin(i * 0.05) * Math.exp(-4 * i / buffer.length);
-                }
-                break;
-
-            case 'swap':
-                // 生成交换音效（上升音调）
-                for (let i = 0; i < buffer.length; i++) {
-                    data[i] = Math.sin(i * 0.03 * (1 + i / buffer.length)) * Math.exp(-3 * i / buffer.length);
-                }
-                break;
-
-            case 'match':
-                // 生成消除音效（下降音调）
-                for (let i = 0; i < buffer.length; i++) {
-                    data[i] = Math.sin(i * 0.04 * (1 - i / buffer.length)) * Math.exp(-2 * i / buffer.length);
-                }
-                break;
-
-            case 'invalid':
-                // 生成无效移动音效（低音）
-                for (let i = 0; i < buffer.length; i++) {
-                    data[i] = Math.sin(i * 0.02) * Math.exp(-4 * i / buffer.length);
-                }
-                break;
-
-            case 'special':
-                // 生成特殊糖果音效（上升和下降音调）
-                for (let i = 0; i < buffer.length; i++) {
-                    data[i] = Math.sin(i * 0.06 * Math.sin(i / buffer.length * Math.PI)) * Math.exp(-2 * i / buffer.length);
-                }
-                break;
-
-            case 'level-complete':
-                // 生成通关音效（欢快的音调）
-                for (let i = 0; i < buffer.length; i++) {
-                    data[i] = Math.sin(i * 0.04) * Math.sin(i * 0.02) * Math.exp(-2 * i / buffer.length);
-                }
-                break;
-
-            case 'game-over':
-                // 生成游戏结束音效（低沉的音调）
-                for (let i = 0; i < buffer.length; i++) {
-                    data[i] = Math.sin(i * 0.01) * Math.exp(-3 * i / buffer.length);
-                }
-                break;
-
-            case 'background-music':
-                // 生成简单的背景音乐（循环音调）
-                for (let i = 0; i < buffer.length; i++) {
-                    data[i] = Math.sin(i * 0.02) * 0.3;
-                }
-                break;
-        }
-
-        return buffer;
-    }
-
-    initMusic() {
-        this.music = new Audio();
-        this.music.src = 'assets/sounds/background-music.mp3';
-        this.music.loop = true;
-        this.music.preload = 'auto';
-        this.setMusicVolume(this.musicVolume);
-
-        // 添加错误处理
-        this.music.addEventListener('error', (e) => {
-            console.error('背景音乐加载失败:', e);
-            // 如果加载失败，创建一个临时的背景音乐
-            if (!this.sounds['background-music']) {
-                this.sounds['background-music'] = this.createTemporarySound('background-music');
+    playBackgroundMusic() {
+        if (!this.isMusicEnabled) return;
+        
+        try {
+            if (this.musicSource) {
+                this.musicSource.stop();
+                this.musicSource = null;
             }
-        });
+
+            if (this.audioBuffers['background-music']) {
+                this.musicSource = this.audioContext.createBufferSource();
+                this.musicSource.buffer = this.audioBuffers['background-music'];
+                this.musicSource.connect(this.musicGain);
+                this.musicSource.loop = true;
+                this.musicSource.start();
+                console.log('背景音乐开始播放');
+            } else {
+                console.warn('背景音乐尚未加载完成');
+            }
+        } catch (error) {
+            console.error('播放背景音乐失败:', error);
+        }
     }
 
-    bindEvents() {
-        const musicSlider = document.getElementById('musicVolume');
-        const soundSlider = document.getElementById('soundVolume');
-
-        musicSlider.addEventListener('input', (e) => {
-            this.setMusicVolume(e.target.value / 100);
-        });
-
-        soundSlider.addEventListener('input', (e) => {
-            this.setSoundVolume(e.target.value / 100);
-        });
-    }
-
-    playSound(type) {
-        if (this.isMuted || !this.sounds[type]) return;
+    playSound(name) {
+        console.log(`尝试播放音效: ${name}`);
+        console.log('静音状态:', this.isMuted);
+        console.log(`音效缓存状态: ${!!this.audioBuffers[name]}`);
         
-        const source = this.audioContext.createBufferSource();
-        source.buffer = this.sounds[type];
-        source.connect(this.soundGainNode);
-        source.start();
-    }
-
-    playMusic() {
-        if (this.isMuted) return;
-        
-        // 如果音乐加载失败，使用临时音乐
-        if (this.music.error && this.sounds['background-music']) {
-            const source = this.audioContext.createBufferSource();
-            source.buffer = this.sounds['background-music'];
-            source.connect(this.soundGainNode);
-            source.loop = true;
-            source.start();
+        if (this.isMuted || !this.audioBuffers[name]) {
+            console.log(`无法播放音效 ${name}: `, this.isMuted ? '已静音' : '音效未加载');
             return;
         }
 
-        this.music.play().catch(e => {
-            console.log('播放音乐时出错:', e);
-            // 尝试使用临时音乐
-            if (this.sounds['background-music']) {
-                const source = this.audioContext.createBufferSource();
-                source.buffer = this.sounds['background-music'];
-                source.connect(this.soundGainNode);
-                source.loop = true;
-                source.start();
-            }
-        });
+        try {
+            const source = this.audioContext.createBufferSource();
+            source.buffer = this.audioBuffers[name];
+            source.connect(this.soundGain);
+            source.start(0);
+            console.log(`音效 ${name} 播放成功`);
+        } catch (error) {
+            console.error(`播放音效 ${name} 时出错:`, error);
+        }
     }
 
-    pauseMusic() {
-        this.music.pause();
+    bindVolumeControls() {
+        console.log('绑定音量控制');
+        
+        // 主菜单音量控制
+        const mainMusicVolume = document.getElementById('mainMusicVolume');
+        const mainSoundVolume = document.getElementById('mainSoundVolume');
+        
+        // 设置菜单音量控制
+        const settingsMusicVolume = document.getElementById('settingsMusicVolume');
+        const settingsSoundVolume = document.getElementById('settingsSoundVolume');
+
+        // 绑定主菜单音量控制
+        if (mainMusicVolume) {
+            mainMusicVolume.value = this.musicVolume * 100;
+            mainMusicVolume.addEventListener('input', (e) => {
+                const volume = e.target.value / 100;
+                this.setMusicVolume(volume);
+                if (settingsMusicVolume) {
+                    settingsMusicVolume.value = e.target.value;
+                }
+            });
+            console.log('主菜单音乐音量控制已绑定');
+        }
+
+        if (mainSoundVolume) {
+            mainSoundVolume.value = this.soundVolume * 100;
+            mainSoundVolume.addEventListener('input', (e) => {
+                const volume = e.target.value / 100;
+                this.setSoundVolume(volume);
+                if (settingsSoundVolume) {
+                    settingsSoundVolume.value = e.target.value;
+                }
+            });
+            console.log('主菜单音效音量控制已绑定');
+        }
+
+        // 绑定设置菜单音量控制
+        if (settingsMusicVolume) {
+            settingsMusicVolume.value = this.musicVolume * 100;
+            settingsMusicVolume.addEventListener('input', (e) => {
+                const volume = e.target.value / 100;
+                this.setMusicVolume(volume);
+                if (mainMusicVolume) {
+                    mainMusicVolume.value = e.target.value;
+                }
+            });
+            console.log('设置菜单音乐音量控制已绑定');
+        }
+
+        if (settingsSoundVolume) {
+            settingsSoundVolume.value = this.soundVolume * 100;
+            settingsSoundVolume.addEventListener('input', (e) => {
+                const volume = e.target.value / 100;
+                this.setSoundVolume(volume);
+                if (mainSoundVolume) {
+                    mainSoundVolume.value = e.target.value;
+                }
+            });
+            console.log('设置菜单音效音量控制已绑定');
+        }
     }
 
     setMusicVolume(volume) {
         this.musicVolume = volume;
-        this.music.volume = volume;
+        this.musicGain.gain.value = volume;
     }
 
     setSoundVolume(volume) {
         this.soundVolume = volume;
-        this.soundGainNode.gain.value = volume;
+        this.soundGain.gain.value = volume;
     }
 
     mute() {
         this.isMuted = true;
-        this.pauseMusic();
+        if (this.musicSource) {
+            this.musicSource.stop();
+            this.musicSource = null;
+        }
     }
 
     unmute() {
         this.isMuted = false;
-        this.playMusic();
+        this.playBackgroundMusic();
+    }
+
+    async resumeAudioContext() {
+        console.log('尝试恢复音频上下文');
+        console.log('当前状态:', this.audioContext.state);
+        
+        if (this.audioContext.state === 'suspended') {
+            try {
+                await this.audioContext.resume();
+                console.log('音频上下文已恢复');
+                // 重新加载音频文件
+                await this.loadAudioFiles();
+            } catch (error) {
+                console.error('恢复音频上下文时出错:', error);
+            }
+        }
+    }
+
+    bindMusicToggle() {
+        const toggleButton = document.getElementById('toggleMusicButton');
+        if (!toggleButton) return;
+
+        toggleButton.addEventListener('click', () => {
+            this.isMusicEnabled = !this.isMusicEnabled;
+            
+            if (this.isMusicEnabled) {
+                this.playBackgroundMusic();
+                toggleButton.textContent = '🎵 音乐开';
+                toggleButton.classList.remove('muted');
+            } else {
+                if (this.musicSource) {
+                    this.musicSource.stop();
+                    this.musicSource = null;
+                }
+                toggleButton.textContent = '🎵 音乐关';
+                toggleButton.classList.add('muted');
+            }
+        });
     }
 }
 

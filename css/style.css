@@ -27,10 +27,10 @@ body {
     height: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
-    background: rgba(0, 0, 0, 0.8);
-    padding: 20px;
+    justify-content: center;
+    background: linear-gradient(135deg, #1a1c20 0%, #2d3436 100%);
+    z-index: 1000;
 }
 
 .hidden {
@@ -91,39 +91,101 @@ h2 {
 
 .game-container {
     width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    position: relative;
+    max-width: 800px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
 }
 
 .game-header {
-    position: relative;
-    width: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    padding: 10px 20px;
-    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.game-info {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.game-info span {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    color: #fff;
+    font-size: 16px;
+    white-space: nowrap;
+}
+
+.game-info span span {
+    background: none;
+    padding: 0 0 0 5px;
+    color: #FFD700;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.game-controls {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding: 10px;
+}
+
+.game-controls button {
+    margin: 0 5px;
+    padding: 8px 16px;
+    font-size: 16px;
+    border: none;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.game-controls button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+.game-controls button:active {
+    transform: scale(0.95);
+}
+
+#toggleMusicButton {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(138, 43, 226, 0.4);
+}
+
+#toggleMusicButton.muted {
+    background: rgba(169, 169, 169, 0.4);
 }
 
 .canvas-container {
-    flex: 1;
     display: flex;
-    align-items: center;
     justify-content: center;
-    padding: 20px;
-    overflow: hidden;
-    margin-top: 0;
+    align-items: center;
+    margin-top: 20px;
 }
 
 #gameCanvas {
-    display: block;
-    background-color: #34495e;
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.3);
-    touch-action: none;
     max-width: 100%;
-    max-height: calc(100vh - 150px);
-    object-fit: contain;
+    height: auto;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
 }
 
 /* 关卡选择网格 */
@@ -202,28 +264,79 @@ h2 {
     text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
+/* 音频控制样式 */
+.audio-controls {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.volume-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.volume-control label {
+    min-width: 80px;
+    color: #fff;
+}
+
+.volume-control input[type="range"] {
+    flex: 1;
+    height: 5px;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    outline: none;
+}
+
+.volume-control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 15px;
+    height: 15px;
+    background: #fff;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #fff;
+    cursor: pointer;
+    padding: 5px;
+    transition: transform 0.2s;
+}
+
+.icon-button:hover {
+    transform: scale(1.1);
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
-    .game-header {
-        padding: 5px 10px;
-    }
-
     .game-info {
         font-size: 14px;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 5px;
+        padding: 10px;
     }
 
-    .game-controls {
-        flex-wrap: wrap;
-        justify-content: center;
+    .game-info span {
+        padding: 6px 10px;
+        font-size: 14px;
+    }
+
+    .game-info span span {
+        font-size: 16px;
     }
 
     .game-controls button {
-        padding: 5px 10px;
+        padding: 8px 16px;
         font-size: 14px;
-        margin: 2px;
     }
 
     .canvas-container {
@@ -232,6 +345,19 @@ h2 {
 
     #gameCanvas {
         max-height: calc(100vh - 120px);
+    }
+
+    .audio-controls {
+        padding: 10px;
+    }
+
+    .volume-control {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .volume-control label {
+        text-align: center;
     }
 }
 

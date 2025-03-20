@@ -13,6 +13,17 @@
         <button id="startGame">开始游戏</button>
         <button id="levelSelect">选择关卡</button>
         <button id="settings">设置</button>
+        <div class="audio-controls">
+            <button id="muteButton" class="icon-button">🔊</button>
+            <div class="volume-control">
+                <label>音乐音量</label>
+                <input type="range" id="mainMusicVolume" min="0" max="100" value="50">
+            </div>
+            <div class="volume-control">
+                <label>音效音量</label>
+                <input type="range" id="mainSoundVolume" min="0" max="100" value="50">
+            </div>
+        </div>
     </div>
 
     <!-- 关卡选择菜单 -->
@@ -26,12 +37,12 @@
     <div id="settingsMenu" class="screen hidden">
         <h2>设置</h2>
         <div class="setting-item">
-            <label for="musicVolume">音乐音量</label>
-            <input type="range" id="musicVolume" min="0" max="100" value="50">
+            <label for="settingsMusicVolume">音乐音量</label>
+            <input type="range" id="settingsMusicVolume" min="0" max="100" value="50">
         </div>
         <div class="setting-item">
-            <label for="soundVolume">音效音量</label>
-            <input type="range" id="soundVolume" min="0" max="100" value="50">
+            <label for="settingsSoundVolume">音效音量</label>
+            <input type="range" id="settingsSoundVolume" min="0" max="100" value="50">
         </div>
         <button class="back-button">返回</button>
     </div>
@@ -41,16 +52,17 @@
         <div class="game-container">
             <div class="game-header">
                 <div class="game-info">
-                    <span>关卡: <span id="currentLevel">1</span></span>
+                    <span>第 <span id="currentLevel">1</span> 关</span>
                     <span>目标分数: <span id="targetScore">1000</span></span>
-                    <span>分数: <span id="score">0</span></span>
+                    <span>当前分数: <span id="score">0</span></span>
                     <span>剩余步数: <span id="moves">20</span></span>
-                    <span id="timerContainer">时间: <span id="timer">60</span></span>
+                    <span id="timerContainer">剩余时间: <span id="timer">60</span>秒</span>
                 </div>
                 <div class="game-controls">
                     <button id="pauseButton">暂停</button>
                     <button id="restartButton">重新开始</button>
                     <button id="quitButton">退出</button>
+                    <button id="toggleMusicButton">🎵 音乐开</button>
                 </div>
             </div>
             <div class="canvas-container">
@@ -86,5 +98,6 @@
     <script src="js/levels/levels.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/game.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html> 
