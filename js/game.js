@@ -49,19 +49,21 @@ class CandyCrushGame {
         
         // 获取关卡配置
         const levelConfig = window.levelManager.getLevel(level);
+        console.log('Level config:', levelConfig);
         
         // 重置游戏状态
         this.score = 0;
-        this.moves = levelConfig.moves;
+        this.moves = levelConfig.moves || 20; // 如果关卡配置中没有指定移动次数，使用默认值20
+        console.log('Initial moves:', this.moves);
         this.selectedTile = null;
         this.gameState = {
             isPlaying: true,
             isPaused: false,
-            timeLeft: levelConfig.timeLimit
+            timeLeft: levelConfig.timeLimit || 0
         };
 
         // 更新网格大小
-        this.gridSize = levelConfig.gridSize;
+        this.gridSize = levelConfig.gridSize || 8; // 如果没有指定网格大小，使用默认值8
         this.canvas.width = this.gridSize * this.tileSize;
         this.canvas.height = this.gridSize * this.tileSize;
 
@@ -125,22 +127,53 @@ class CandyCrushGame {
         const x = Math.floor(((e.clientX - rect.left) * scaleX) / this.tileSize);
         const y = Math.floor(((e.clientY - rect.top) * scaleY) / this.tileSize);
 
-        console.log('Click position:', {x, y});
-
         if (!this.isValidPosition(x, y)) return;
 
         if (!this.selectedTile) {
             this.selectedTile = {x, y};
-            console.log('Selected tile:', this.selectedTile);
         } else {
             if (this.isAdjacent(this.selectedTile, {x, y})) {
-                this.swapTilesAndCheck(this.selectedTile, {x, y});
+                // 获取起始和目标位置的糖果
+                const startTile = this.board[this.selectedTile.y][this.selectedTile.x];
+                const endTile = this.board[y][x];
+                this.swapTilesAndCheck(startTile, endTile);
             }
             this.selectedTile = null;
         }
     }
 
+    async handleSwipe(startX, startY, endX, endY) {
+        if (!this.gameState.isPlaying || this.gameState.isPaused) return;
+
+        // 将触摸坐标转换为网格坐标
+        const rect = this.canvas.getBoundingClientRect();
+        const gridStartX = Math.floor((startX - rect.left) / this.tileSize);
+        const gridStartY = Math.floor((startY - rect.top) / this.tileSize);
+        const gridEndX = Math.floor((endX - rect.left) / this.tileSize);
+        const gridEndY = Math.floor((endY - rect.top) / this.tileSize);
+
+        // 检查坐标是否在网格范围内
+        if (!this.isValidPosition(gridStartX, gridStartY) || 
+            !this.isValidPosition(gridEndX, gridEndY)) {
+            return;
+        }
+
+        // 计算滑动方向
+        const dx = gridEndX - gridStartX;
+        const dy = gridEndY - gridStartY;
+
+        // 只处理水平或垂直方向的滑动，且只能移动一格
+        if (Math.abs(dx) === 1 && dy === 0 || Math.abs(dy) === 1 && dx === 0) {
+            // 获取起始和目标位置的糖果
+            const startTile = this.board[gridStartY][gridStartX];
+            const endTile = this.board[gridEndY][gridEndX];
+            await this.swapTilesAndCheck(startTile, endTile);
+        }
+    }
+
     async swapTilesAndCheck(tile1, tile2) {
+        if (!tile1 || !tile2) return;
+
         // 交换糖果
         this.swapTiles(tile1, tile2);
         
@@ -193,10 +226,13 @@ class CandyCrushGame {
         const newMatches = this.findMatches();
         if (newMatches.length > 0) {
             await this.handleMatches(newMatches);
+            return;
         }
 
-        // 检查游戏状态
-        this.checkGameState();
+        // 只在没有新的匹配时，并且moves为0时才检查游戏状态
+        if (this.moves <= 0) {
+            this.checkGameState();
+        }
     }
 
     async handleFallingAndFilling() {
@@ -255,19 +291,31 @@ class CandyCrushGame {
 
         // 检查是否还有移动次数
         if (this.moves <= 0) {
-            this.gameOver(false);
+            // 如果已经达到目标分数，仍然算作胜利
+            if (this.score >= levelConfig.targetScore) {
+                this.gameOver(true);
+            } else {
+                // 只有在确实没有移动次数，并且没有达到目标分数时才结束游戏
+                this.gameOver(false);
+            }
             return;
         }
 
         // 检查时间限制（如果有）
         if (levelConfig.timeLimit > 0 && this.gameState.timeLeft <= 0) {
-            this.gameOver(false);
+            // 如果已经达到目标分数，仍然算作胜利
+            if (this.score >= levelConfig.targetScore) {
+                this.gameOver(true);
+            } else {
+                this.gameOver(false);
+            }
             return;
         }
 
         // 检查是否还有可能的移动
         if (!this.hasValidMoves()) {
-            this.gameOver(false);
+            // 重新打乱游戏板，保持分数和移动次数不变
+            this.reshuffleBoard();
         }
     }
 
@@ -278,25 +326,78 @@ class CandyCrushGame {
                 // 检查水平交换
                 if (j < this.gridSize - 1) {
                     // 临时交换
-                    this.swapTiles({x: j, y: i}, {x: j + 1, y: i});
+                    const temp = this.board[i][j].type;
+                    this.board[i][j].type = this.board[i][j + 1].type;
+                    this.board[i][j + 1].type = temp;
+
                     const hasMatch = this.findMatches().length > 0;
+
                     // 交换回来
-                    this.swapTiles({x: j, y: i}, {x: j + 1, y: i});
+                    this.board[i][j + 1].type = this.board[i][j].type;
+                    this.board[i][j].type = temp;
+
                     if (hasMatch) return true;
                 }
                 
                 // 检查垂直交换
                 if (i < this.gridSize - 1) {
                     // 临时交换
-                    this.swapTiles({x: j, y: i}, {x: j, y: i + 1});
+                    const temp = this.board[i][j].type;
+                    this.board[i][j].type = this.board[i + 1][j].type;
+                    this.board[i + 1][j].type = temp;
+
                     const hasMatch = this.findMatches().length > 0;
+
                     // 交换回来
-                    this.swapTiles({x: j, y: i}, {x: j, y: i + 1});
+                    this.board[i + 1][j].type = this.board[i][j].type;
+                    this.board[i][j].type = temp;
+
                     if (hasMatch) return true;
                 }
             }
         }
         return false;
+    }
+
+    reshuffleBoard() {
+        console.log('重新打乱游戏板...');
+        
+        // 保存当前分数和移动次数
+        const currentScore = this.score;
+        const currentMoves = this.moves;
+        
+        // 创建新的游戏板
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        do {
+            // 重新初始化游戏板
+            for (let i = 0; i < this.gridSize; i++) {
+                for (let j = 0; j < this.gridSize; j++) {
+                    this.board[i][j].type = this.getRandomCandyType();
+                }
+            }
+            attempts++;
+            
+            // 如果尝试次数过多，调整糖果类型的分布
+            if (attempts >= maxAttempts / 2) {
+                console.log('调整糖果分布以增加匹配机会...');
+            }
+            
+        } while (!this.hasValidMoves() && attempts < maxAttempts);
+        
+        // 恢复分数和移动次数
+        this.score = currentScore;
+        this.moves = currentMoves;
+        
+        // 更新UI显示
+        document.getElementById('score').textContent = this.score;
+        document.getElementById('moves').textContent = this.moves;
+        
+        // 播放重新打乱的音效
+        window.audioManager?.playSound('shuffle');
+        
+        console.log('游戏板已重新打乱，当前分数:', this.score, '剩余步数:', this.moves);
     }
 
     gameLoop() {
@@ -405,19 +506,14 @@ class CandyCrushGame {
     }
 
     swapTiles(tile1, tile2) {
-        const temp = this.board[tile1.y][tile1.x];
-        this.board[tile1.y][tile1.x] = this.board[tile2.y][tile2.x];
-        this.board[tile2.y][tile2.x] = temp;
-        
-        // 更新坐标
-        if (this.board[tile1.y][tile1.x]) {
-            this.board[tile1.y][tile1.x].x = tile1.x;
-            this.board[tile1.y][tile1.x].y = tile1.y;
-        }
-        if (this.board[tile2.y][tile2.x]) {
-            this.board[tile2.y][tile2.x].x = tile2.x;
-            this.board[tile2.y][tile2.x].y = tile2.y;
-        }
+        if (!tile1 || !tile2) return;
+
+        // 交换两个糖果的类型
+        const tempType = tile1.type;
+        tile1.type = tile2.type;
+        tile2.type = tempType;
+
+        // gameLoop 会自动处理重绘
     }
 
     findMatches() {
@@ -503,48 +599,6 @@ class CandyCrushGame {
 
     restartLevel() {
         this.startGame(this.currentLevel);
-    }
-
-    handleSwipe(startX, startY, endX, endY) {
-        if (!this.gameState.isPlaying || this.gameState.isPaused) return;
-
-        // 将触摸坐标转换为网格坐标
-        const rect = this.canvas.getBoundingClientRect();
-        const gridStartX = Math.floor((startX - rect.left) / this.tileSize);
-        const gridStartY = Math.floor((startY - rect.top) / this.tileSize);
-        const gridEndX = Math.floor((endX - rect.left) / this.tileSize);
-        const gridEndY = Math.floor((endY - rect.top) / this.tileSize);
-
-        // 检查坐标是否在网格范围内
-        if (gridStartX < 0 || gridStartX >= this.gridSize ||
-            gridStartY < 0 || gridStartY >= this.gridSize ||
-            gridEndX < 0 || gridEndX >= this.gridSize ||
-            gridEndY < 0 || gridEndY >= this.gridSize) {
-            return;
-        }
-
-        // 计算滑动方向
-        const dx = gridEndX - gridStartX;
-        const dy = gridEndY - gridStartY;
-
-        // 只处理水平或垂直方向的滑动
-        if (Math.abs(dx) > Math.abs(dy)) {
-            // 水平滑动
-            if (Math.abs(dx) === 1) {
-                this.swapTiles(
-                    {x: gridStartX, y: gridStartY},
-                    {x: gridEndX, y: gridStartY}
-                );
-            }
-        } else {
-            // 垂直滑动
-            if (Math.abs(dy) === 1) {
-                this.swapTiles(
-                    {x: gridStartX, y: gridStartY},
-                    {x: gridStartX, y: gridEndY}
-                );
-            }
-        }
     }
 }
 
