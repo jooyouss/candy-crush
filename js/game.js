@@ -229,6 +229,13 @@ class CandyCrushGame {
             return;
         }
 
+        // 检查是否有可能的移动
+        if (!this.hasValidMoves()) {
+            console.log('没有可能的移动，重新打乱游戏板...');
+            this.reshuffleBoard();
+            return;
+        }
+
         // 只在没有新的匹配时，并且moves为0时才检查游戏状态
         if (this.moves <= 0) {
             this.checkGameState();
@@ -330,13 +337,17 @@ class CandyCrushGame {
                     this.board[i][j].type = this.board[i][j + 1].type;
                     this.board[i][j + 1].type = temp;
 
+                    // 检查是否有匹配
                     const hasMatch = this.findMatches().length > 0;
 
                     // 交换回来
                     this.board[i][j + 1].type = this.board[i][j].type;
                     this.board[i][j].type = temp;
 
-                    if (hasMatch) return true;
+                    if (hasMatch) {
+                        console.log('找到可能的水平移动:', i, j);
+                        return true;
+                    }
                 }
                 
                 // 检查垂直交换
@@ -346,16 +357,21 @@ class CandyCrushGame {
                     this.board[i][j].type = this.board[i + 1][j].type;
                     this.board[i + 1][j].type = temp;
 
+                    // 检查是否有匹配
                     const hasMatch = this.findMatches().length > 0;
 
                     // 交换回来
                     this.board[i + 1][j].type = this.board[i][j].type;
                     this.board[i][j].type = temp;
 
-                    if (hasMatch) return true;
+                    if (hasMatch) {
+                        console.log('找到可能的垂直移动:', i, j);
+                        return true;
+                    }
                 }
             }
         }
+        console.log('没有找到可能的移动');
         return false;
     }
 
@@ -384,7 +400,13 @@ class CandyCrushGame {
                 console.log('调整糖果分布以增加匹配机会...');
             }
             
-        } while (!this.hasValidMoves() && attempts < maxAttempts);
+        } while ((!this.hasValidMoves() || this.findMatches().length > 0) && attempts < maxAttempts);
+        
+        // 如果maxAttempts次尝试后仍然没有找到有效的布局，强制生成一个有效的布局
+        if (attempts >= maxAttempts) {
+            console.log('达到最大尝试次数，强制生成有效布局...');
+            this.forceValidBoard();
+        }
         
         // 恢复分数和移动次数
         this.score = currentScore;
@@ -398,6 +420,36 @@ class CandyCrushGame {
         window.audioManager?.playSound('shuffle');
         
         console.log('游戏板已重新打乱，当前分数:', this.score, '剩余步数:', this.moves);
+    }
+
+    forceValidBoard() {
+        // 强制生成一个有效的游戏板
+        const colors = ['#FF4444', '#44FF44', '#4444FF', '#FFFF44', '#FF44FF', '#44FFFF'];
+        
+        for (let i = 0; i < this.gridSize; i++) {
+            for (let j = 0; j < this.gridSize; j++) {
+                // 获取相邻的颜色
+                const adjacentColors = new Set();
+                if (i > 1 && this.board[i-1][j] && this.board[i-2][j]) {
+                    if (this.board[i-1][j].type.color === this.board[i-2][j].type.color) {
+                        adjacentColors.add(this.board[i-1][j].type.color);
+                    }
+                }
+                if (j > 1 && this.board[i][j-1] && this.board[i][j-2]) {
+                    if (this.board[i][j-1].type.color === this.board[i][j-2].type.color) {
+                        adjacentColors.add(this.board[i][j-1].type.color);
+                    }
+                }
+
+                // 选择一个不会形成匹配的颜色
+                const availableColors = colors.filter(color => !adjacentColors.has(color));
+                const randomColor = availableColors[Math.floor(Math.random() * availableColors.length)];
+                
+                this.board[i][j].type = {
+                    color: randomColor
+                };
+            }
+        }
     }
 
     gameLoop() {
@@ -528,7 +580,7 @@ class CandyCrushGame {
                 
                 if (candy1 && candy2 && candy3 &&
                     candy1.type.color === candy2.type.color && 
-                    candy1.type.color === candy3.type.color) {
+                    candy2.type.color === candy3.type.color) {
                     matches.add(`${i},${j}`);
                     matches.add(`${i},${j+1}`);
                     matches.add(`${i},${j+2}`);
@@ -545,7 +597,7 @@ class CandyCrushGame {
                 
                 if (candy1 && candy2 && candy3 &&
                     candy1.type.color === candy2.type.color && 
-                    candy1.type.color === candy3.type.color) {
+                    candy2.type.color === candy3.type.color) {
                     matches.add(`${i},${j}`);
                     matches.add(`${i+1},${j}`);
                     matches.add(`${i+2},${j}`);
